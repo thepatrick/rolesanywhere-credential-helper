@@ -75,12 +75,12 @@ jobs:
       - name: Extract the a64 image
         run: |
           mkdir build-amd64
-          docker run --rm -it -v ./build-amd64:/output/ --platform linux/amd64 ghcr.io/${{github.repository}}@${{ steps.docker_build.outputs.digest }} cp /app/build/bin/aws_signing_helper /output/
+          docker run --rm -v ./build-amd64:/output/ --platform linux/amd64 ghcr.io/${{github.repository}}@${{ steps.docker_build.outputs.digest }} cp /app/build/bin/aws_signing_helper /output/
 
       - name: Extract the arm64 image
         run: |
           mkdir build-arm64
-          docker run --rm -it -v ./build-arm64:/output/ --platform linux/arm64 ghcr.io/${{github.repository}}@${{ steps.docker_build.outputs.digest }} cp /app/build/bin/aws_signing_helper /output/
+          docker run --rm -v ./build-arm64:/output/ --platform linux/arm64 ghcr.io/${{github.repository}}@${{ steps.docker_build.outputs.digest }} cp /app/build/bin/aws_signing_helper /output/
 
       - name: Release
         uses: softprops/action-gh-release@v2
