@@ -68,7 +68,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           platforms: linux/arm64 # skipping elinux/amd64 for now
-          push: github.event_name != 'pull_request'
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
 
