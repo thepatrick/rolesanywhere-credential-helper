@@ -1,0 +1,75 @@
+name: Push to main
+on:
+  push:
+    branches:
+      - main
+
+# permissions:
+#   actions: read|write|none
+#   checks: read|write|none
+#   contents: read|write|none
+#   deployments: read|write|none
+#   id-token: read|write|none
+#   issues: read|write|none
+#   discussions: read|write|none
+#   packages: read|write|none
+#   pages: read|write|none
+#   pull-requests: read|write|none
+#   repository-projects: read|write|none
+#   security-events: read|write|none
+#   statuses: read|write|none
+
+jobs:
+  up:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.docker_build.outputs.digest }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Docker meta
+      id: docker_meta
+      uses: crazy-max/ghaction-docker-meta@v5
+      with:
+        images: ghcr.io/${{ github.repository }} # list of Docker images to use as base name for tags
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=raw,value=latest,enable={{is_default_branch}}
+          type=sha
+          type=sha,format=long
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push
+      id: docker_build
+      uses: docker/build-push-action@v5
+      with:
+        platforms: linux/amd64,linux/arm64
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.docker_meta.outputs.tags }}
+        labels: ${{ steps.docker_meta.outputs.labels }}
+
+    - name: Image digest
+      run: echo ${{ steps.docker_build.outputs.digest }}
+
+
+# TODO: Extract the binaries from the docker images, and publish these as a github release?
+# mkdir build-${arch}
+# docker run --rm -it -v ./build-${arch}:/output/ rolesanywhere-credential-helper cp /app/build/bin/aws_signing_helper /output/
