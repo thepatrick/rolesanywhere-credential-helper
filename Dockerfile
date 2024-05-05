@@ -8,5 +8,5 @@ COPY . /app/
 
 RUN make release
 
-
+# TODO: Add a multi-stage build to reduce the size of the final image
 
