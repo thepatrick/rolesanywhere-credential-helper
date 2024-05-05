@@ -21,6 +21,7 @@ on:
 #   repository-projects: read|write|none
 #   security-events: read|write|none
 #   statuses: read|write|none
+#   attestations: read|write|none
 
 jobs:
   up:
@@ -31,6 +32,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,34 +67,18 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v5
         with:
-          platforms: linux/amd64,linux/arm64
-          push: true # github.event_name != 'pull_request'
+          platforms: linux/arm64 # skipping elinux/amd64 for now
+          push: github.event_name != 'pull_request'
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
 
-      - name: Extract the a64 image
-        run: |
-          mkdir build-amd64
-          docker run --rm -v ./build-amd64:/output/ --platform linux/amd64 ghcr.io/${{ github.repository }}:sha-${{ github.sha }} cp /app/build/bin/aws_signing_helper /output/
-
-      - name: Extract the arm64 image
-        run: |
-          mkdir build-arm64
-          docker run --rm -v ./build-arm64:/output/ --platform linux/arm64 ghcr.io/${{ github.repository }}:sha-${{ github.sha }} cp /app/build/bin/aws_signing_helper /output/
-
-      - name: Release
-        uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/main'
+      - name: Attest image
+        uses: github-early-access/generate-build-provenance@main
+        if: github.event_name != 'pull_request'
         with:
-          files: |
-            build-arm64/aws_signing_helper
-            LICENSE
-
-# steps.docker_build.outputs.digest
-
-# TODO: Extract the binaries from the docker images, and publish these as a github release?
-# mkdir build-${arch}
-# docker run --rm -it -v ./build-${arch}:/output/ rolesanywhere-credential-helper cp /app/build/bin/aws_signing_helper /output/
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.docker_build.outputs.digest }}
+          push-to-registry: true
